@@ -2,26 +2,26 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-class BinaryDiceLoss(nn.Module):
-    def __init__(self, smooth = 1, p = 2):
-        super(BinaryDiceLoss, self).__init__()
-        self.smooth = smooth
-        self.p = p
+class DiceLoss(nn.Module):
+    def __init__(self):
+        super(DiceLoss, self).__init__()
 
-    def forward(self, predict, target):
-        assert predict.shape[0] == target.shape[0]
-        
-        predict = predict.contiguous().view(predict.shape[0], -1)
-        target = target.contiguous().view(target.shape[0], -1)
+    def forward(self, x, y):
+        if x.shape[0] != y.shape[0]:
+            print("Predict size != target size")
+            return
+            
+        x = x.contiguous().view(x.shape[0], -1)
+        y = y.contiguous().view(y.shape[0], -1)
 
-        dice = (torch.sum(torch.mul(predict, target))*2 + self.smooth) / (torch.sum(predict.pow(self.p) + target.pow(self.p)) + self.smooth)
+        dice = (torch.sum(torch.mul(x, y))*2 + 1) / (torch.sum(x.pow(2) + y.pow(2)) + 1)
 
         return 1 - dice
 
 def DiceCoeff(x, y, c = 0.5):
     x = x.flatten()
     y = y.flatten()
-    x[x > c] = np.float32(1)
-    x[x < c] = np.float32(0)
-    dice = float(2 * (y * x).sum()) / float(y.sum() + x.sum())
+    xx = np.power(x,2)
+    yy = np.power(y,2)
+    dice = float(2 * (y * x).sum() + 1) / float(yy.sum() + xx.sum() + 1)
     return dice

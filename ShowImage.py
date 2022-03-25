@@ -3,8 +3,8 @@ from matplotlib import pylab as plt
 import nibabel as nib
 from nibabel.viewers import OrthoSlicer3D
 
-example_filename = "./dataset2019/archive/training/LGG/BraTS19_2013_0_1/BraTS19_2013_0_1_flair.nii"
-#example_filename = 'result5.nii'
+#example_filename = "./dataset2019/archive/training/LGG/BraTS19_2013_0_1/BraTS19_2013_0_1_flair.nii"
+example_filename = './Result/result_3.nii'
 img = nib.load(example_filename)
 print(img)
  
