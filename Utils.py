@@ -13,7 +13,6 @@ from tqdm import tqdm
 
 from Parameters import *
 from DiceLoss import * 
-from Predict import *
 from DiceLoss import *
 from ImageDataSet import *
 from AverageMeter import *
@@ -21,6 +20,7 @@ from Resample import *
 from DataAugmentation import *
 from Padding import *
 from RandomCrop import *
+from AdaptiveHistogramEqualization import *
 
 def CheckDir(path):
     if not os.path.exists(path):
@@ -109,7 +109,7 @@ def CreateDatasetFolters(images_path, labels_path, validation_number = 50, testi
     images_train_out_path = IMAGES_TRAIN_PATH
     images_validation_out_path = IMAGES_VALIDATION_PATH
     images_test_out_path = IMAGES_TEST_PATH
-    labels_train_out_path = LABELS_TARIN_PATH
+    labels_train_out_path = LABELS_TRARIN_PATH
     labels_validation_out_path = LABELS_VALIDATION_PATH
     labels_test_out_path = LABELS_TEST_PATH
 
@@ -147,10 +147,47 @@ def CreateDatasetFolters(images_path, labels_path, validation_number = 50, testi
                         images_path = images_test_out_path, 
                         labels_path = labels_test_out_path)
 
+def ReadImage(path):
+    reader = sitk.ImageFileReader()
+    reader.SetFileName(path)
+    image = reader.Execute()
+    return image
+
+def HistogrammProcessing(path_1, path_2, result_path_1, result_path_2):
+    data_list = CreateListFromPath(path_1, path_2)
+    n = len(data_list)
+    CheckFolder(result_path_1)
+    CheckFolder(result_path_2)
+
+    for i in range(n):
+        data = data_list[i]
+        image_path = data['image']
+        label_path = data["label"]
+
+        image = ReadImage(image_path)
+        image = ImageNormalization(image)
+        label = ReadImage(label_path)
+        label = ImageNormalization(label)  
+        sample = {'image': image, 'label': label}
+
+        hist = AdaptiveHistogramEqualization()
+        result = hist(sample)
+        res_image = result['image']
+        res_label = result['label']
+
+        sitk.WriteImage(res_image, os.path.join(result_path_1, f"image{i:d}.nii"))
+        sitk.WriteImage(res_label, os.path.join(result_path_2, f"label{i:d}.nii"))
+
+    
+
 
 if __name__ == "__main__":
-    CreateDataset(DATASET_LABELS_PATH, 'seg')
-    CreateDataset(DATASET_IMAGES_FLAIR_PATH, 'flair')
-    CreateDataset(DATASET_IMAGES_T1CE_PATH, 't1ce')
+    #CreateDataset(DATASET_LABELS_PATH, 'seg')
+    #CreateDataset(DATASET_IMAGES_FLAIR_PATH, 'flair')
+    #CreateDataset(DATASET_IMAGES_T1CE_PATH, 't1ce')
 
-    CreateDatasetFolters(DATASET_IMAGES_FLAIR_PATH, DATASET_LABELS_PATH)
+    #CreateDatasetFolters(DATASET_IMAGES_FLAIR_PATH, DATASET_LABELS_PATH)
+
+    #HistogrammProcessing(IMAGES_TRAIN_PATH, LABELS_TRARIN_PATH, DATASET_HIST_IMAGES_TRAIN_PATH, DATASET_HIST_LABELS_TRARIN_PATH)
+    HistogrammProcessing(IMAGES_VALIDATION_PATH, LABELS_VALIDATION_PATH, DATASET_HIST_IMAGES_VALIDATION_PATH, DATASET_HIST_LABELS_VALIDATION_PATH)
+    HistogrammProcessing(IMAGES_TEST_PATH, LABELS_TEST_PATH, DATASET_HIST_IMAGES_TEST_PATH, DATASET_HIST_LABELS_TEST_PATH)

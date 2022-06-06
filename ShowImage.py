@@ -3,8 +3,11 @@ from matplotlib import pylab as plt
 import nibabel as nib
 from nibabel.viewers import OrthoSlicer3D
 
-#example_filename = "./dataset2019/archive/training/LGG/BraTS19_2013_0_1/BraTS19_2013_0_1_flair.nii"
-example_filename = './Result/result_3.nii'
+from Parameters import *
+
+#example_filename = "./dataset2019/archive/training\LGG\BraTS19_TCIA10_266_1\BraTS19_TCIA10_266_1_t2.nii"
+example_filename = './Result/predict_result_13.nii'
+#example_filename = TEST_LABEL
 img = nib.load(example_filename)
 print(img)
  
@@ -20,6 +23,8 @@ for i in range(0, height, 20):
  
 plt.show()
 
+
+
 num = 1
 for i in range(0, width, 20):
     img_arr = img.dataobj[i, :, :]
@@ -29,11 +34,11 @@ for i in range(0, width, 20):
  
 plt.show()
 
+'''
 test_image=nib.load(example_filename).get_data()
 plt.imshow(test_image[75])
 plt.show()
 
-'''
 import SimpleITK as sitk
 from matplotlib import pyplot as plt
 

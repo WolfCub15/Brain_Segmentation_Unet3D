@@ -11,17 +11,21 @@ class DiceLoss(nn.Module):
             print("Predict size != target size")
             return
             
-        x = x.contiguous().view(x.shape[0], -1)
-        y = y.contiguous().view(y.shape[0], -1)
+        #x = x.contiguous().view(x.shape[0], -1)
+        #y = y.contiguous().view(y.shape[0], -1)
 
-        dice = (torch.sum(torch.mul(x, y))*2 + 1) / (torch.sum(x.pow(2) + y.pow(2)) + 1)
-
+        #dice = (torch.sum(torch.mul(x, y))*2.0 + 1.0) / (torch.sum(x + y) + 1.0)
+        incr = (2.0 * (x*y).sum() + 0.99) 
+        union = (x.sum() + y.sum() + 0.99)
+        dice = incr/union
         return 1 - dice
 
-def DiceCoeff(x, y, c = 0.5):
-    x = x.flatten()
-    y = y.flatten()
-    xx = np.power(x,2)
-    yy = np.power(y,2)
-    dice = float(2 * (y * x).sum() + 1) / float(yy.sum() + xx.sum() + 1)
+def DiceCoeff(x, y):
+    #x = x.flatten()
+    #y = y.flatten()
+
+    if x.sum() == 0 and y.sum() == 0:
+        return 1
+
+    dice = float(2 * (y * x).sum()) / float(y.sum() + x.sum())
     return dice

@@ -1,4 +1,4 @@
-from torch.nn import Module, Sequential, Conv3d, ConvTranspose3d, BatchNorm3d, MaxPool3d, AvgPool1d, Dropout3d, ReLU, Sigmoid
+from torch.nn import Module, Sequential, Conv3d, ConvTranspose3d, BatchNorm3d, MaxPool3d, Dropout3d, ReLU, Sigmoid
 import torch
 from torch.autograd import Variable
 from torchsummaryX import summary
@@ -11,6 +11,7 @@ class UNet(Module):
         super(UNet, self).__init__()
 
         channel_64 = 64
+        channel_128 = 128
         channel_256 = 256
         channel_512 = 512
         channel_1024 = 1024
@@ -21,20 +22,20 @@ class UNet(Module):
         self.pool4 = MaxPool3d((2, 2, 2))
 
         self.conv_blok_1 = Conv3DBlock(channels, channel_64, residual = residual)
-        self.conv_blok_2 = Conv3DBlock(channel_64, channel_256, residual = residual)
-        self.conv_blok_3 = Conv3DBlock(channel_256, channel_256, residual = residual)
+        self.conv_blok_2 = Conv3DBlock(channel_64, channel_128, residual = residual)
+        self.conv_blok_3 = Conv3DBlock(channel_128, channel_256, residual = residual)
         self.conv_blok_4 = Conv3DBlock(channel_256, channel_512, residual = residual)
         self.conv_blok_5 = Conv3DBlock(channel_512, channel_1024, residual = residual)
 
         self.decoder_conv_blok_4 = Conv3DBlock(2 * channel_512, channel_512, residual = residual)
         self.decoder_conv_blok_3 = Conv3DBlock(2 * channel_256, channel_256, residual = residual)
-        self.decoder_conv_blok_2 = Conv3DBlock(2 * channel_256, channel_256, residual = residual)
+        self.decoder_conv_blok_2 = Conv3DBlock(2 * channel_128, channel_128, residual = residual)
         self.decoder_conv_blok_1 = Conv3DBlock(2 * channel_64, channel_64, residual = residual)
 
         self.deconv_blok_4 = Deconv3DBlock(channel_1024, channel_512)
         self.deconv_blok_3 = Deconv3DBlock(channel_512, channel_256)
-        self.deconv_blok_2 = Deconv3DBlock(channel_256, channel_256)
-        self.deconv_blok_1 = Deconv3DBlock(channel_256, channel_64)
+        self.deconv_blok_2 = Deconv3DBlock(channel_256, channel_128)
+        self.deconv_blok_1 = Deconv3DBlock(channel_128, channel_64)
 
         self.final_conv = Conv3d(channel_64, channels, kernel_size = 1, stride = 1, padding = 0, bias = True)
 
@@ -62,11 +63,11 @@ class UNet(Module):
 
         deconv3 = torch.cat([self.deconv_blok_3(uconv4), conv3], dim=1)
         uconv3 = self.decoder_conv_blok_3(deconv3)
-        uconv3 = Dropout3d(p=0.5)(uconv3)
+        uconv3 = Dropout3d(p = 0.5)(uconv3)
 
         deconv2 = torch.cat([self.deconv_blok_2(uconv3), conv2], dim=1)
         uconv2 = self.decoder_conv_blok_2(deconv2)
-        uconv2 = Dropout3d(p=0.5)(uconv2)
+        uconv2 = Dropout3d(p = 0.5)(uconv2)
 
         deconv1 = torch.cat([self.deconv_blok_1(uconv2), conv1], dim=1)
         uconv1 = self.decoder_conv_blok_1(deconv1)
@@ -77,8 +78,8 @@ class UNet(Module):
 
 class Conv3DBlock(Module):
     def __init__(self, 
-                in_channels, 
-                out_channels, 
+                input_channels, 
+                output_channels, 
                 kernel_size = 3, 
                 stride = 1, 
                 padding = 1, 
@@ -87,32 +88,32 @@ class Conv3DBlock(Module):
         super(Conv3DBlock, self).__init__()
 
         self.conv1 = Sequential(
-                        Conv3d(in_channels, 
-                                out_channels, 
-                                kernel_size=kernel_size,
-                                stride=stride, 
-                                padding=padding, 
-                                bias=True),
-                        BatchNorm3d(out_channels),
+                        Conv3d(input_channels, 
+                                output_channels, 
+                                kernel_size = kernel_size,
+                                stride = stride, 
+                                padding = padding, 
+                                bias = True),
+                        BatchNorm3d(output_channels),
                         ReLU())
 
         self.conv2 = Sequential(
-                        Conv3d(out_channels, 
-                                out_channels, 
-                                kernel_size=kernel_size,
-                                stride=stride, 
-                                padding=padding, 
-                                bias=True),
-                        BatchNorm3d(out_channels),
+                        Conv3d(output_channels, 
+                                output_channels, 
+                                kernel_size = kernel_size,
+                                stride = stride, 
+                                padding = padding, 
+                                bias = True),
+                        BatchNorm3d(output_channels),
                         ReLU())
 
         self.residual = residual
 
         if self.residual is not None:
-            self.residual_upsampler = Conv3d(in_channels, 
-                                            out_channels, 
-                                            kernel_size=1, 
-                                            bias=False)
+            self.residual_upsampler = Conv3d(input_channels, 
+                                            output_channels, 
+                                            kernel_size = 1, 
+                                            bias = False)
 
     def forward(self, x):
         res = x
@@ -124,8 +125,8 @@ class Conv3DBlock(Module):
 
 class Deconv3DBlock(Module):
     def __init__(self, 
-                in_channels, 
-                out_channels, 
+                input_channels, 
+                output_channels, 
                 kernel_size=3, 
                 stride=2, 
                 padding=1):
@@ -133,13 +134,13 @@ class Deconv3DBlock(Module):
         super(Deconv3DBlock, self).__init__()
 
         self.deconv = Sequential(
-                        ConvTranspose3d(in_channels, 
-                                        out_channels, 
-                                        kernel_size=(kernel_size, kernel_size, kernel_size),
-                                        stride=(stride, stride, stride), 
-                                        padding=(padding, padding, padding), 
-                                        output_padding=1, 
-                                        bias=True),
+                        ConvTranspose3d(input_channels, 
+                                        output_channels, 
+                                        kernel_size = (kernel_size, kernel_size, kernel_size),
+                                        stride = (stride, stride, stride), 
+                                        padding = (padding, padding, padding), 
+                                        output_padding = 1, 
+                                        bias = True),
                         ReLU())
 
     def forward(self, x):
@@ -149,7 +150,7 @@ class Deconv3DBlock(Module):
 if __name__ == '__main__':
     torch.cuda.set_device(0)
     net =UNet(residual='pool').cuda().eval()
-    data = Variable(torch.randn(1, 1, 64, 64, 16)).cuda()
+    data = Variable(torch.randn(1, 1, 32, 32, 32)).cuda()
     out = net(data)
     summary(net, data)
     print("out size: {}".format(out.size()))
